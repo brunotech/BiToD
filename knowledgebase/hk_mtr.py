@@ -34,7 +34,7 @@ color = {"AE": "turquoise",
          "TW": "red",
          "TC": "orange",
          "NP":"orange"}
- 
+
 color_to_zh = {
         "turquoise":"綠松石",
         "pink":"粉色的",
@@ -115,10 +115,9 @@ for n in nx_graph.nodes():
     if "label" in nx_graph.nodes[n]:
         temp["name_zh"] = nx_graph.nodes[n]["label"].split("\\r")[0].replace('"',"")
         temp["name_en"] = nx_graph.nodes[n]["label"].split("\\r")[1].replace('"',"")
-    else:
-        if n in name_missing:
-            temp["name_zh"] = name_missing[n]["label"].split("\r")[0]
-            temp["name_en"] = name_missing[n]["label"].split("\r")[1]
+    elif n in name_missing:
+        temp["name_zh"] = name_missing[n]["label"].split("\r")[0]
+        temp["name_en"] = name_missing[n]["label"].split("\r")[1]
     name_to_code_en[temp["name_en"]] = n
     name_to_code_zh[temp["name_zh"]] = n
     temp_c = []
@@ -178,11 +177,11 @@ for s,t in nx_graph.edges():
 def MTR(source = "HKU",target = "Kowloon Tong", lang="en"):
     source = MTR_map[source]
     target = MTR_map[target]
+    str_ret = ""
     if lang == "en":
         shortest = nx.shortest_path(G, source=source, target=target)
         price = round((len(shortest)-2)*0.88+3.4, 2)
         time = (len(shortest)-2)*3
-        str_ret = ""
         str_ret += f"Take the {shortest[1].split('_')[1]} line of the {shortest[0]} station."
         for i in range(2,len(shortest)-1):
             name, color = shortest[i].split("_")
@@ -195,7 +194,6 @@ def MTR(source = "HKU",target = "Kowloon Tong", lang="en"):
         shortest = nx.shortest_path(G_ZH, source=source, target=target)
         price = round((len(shortest)-2)*0.88+3.4, 2)
         time = (len(shortest)-2)*3
-        str_ret = ""
         str_ret += f"请在{shortest[0]}站乘坐{shortest[1].split('_')[1]}线，"
         for i in range(2,len(shortest)-1):
             name, color = shortest[i].split("_")

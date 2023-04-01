@@ -32,12 +32,20 @@ zh2en_API_MAP = {"餐馆查询": "restaurants_zh_CN_search", "餐馆预订":"res
 "香港地铁":"HKMTR_zh"}
 en2zh_RELATION_MAP = {"equal_to":"等于", "not":"非", "less_than":"少于", "at_least":"至少", "one_of":"其中之一"}
 
-API_MAP = {'chat':'chat', "restaurants_en_US_search": "restaurants search", "restaurants_en_US_booking":"restaurants booking", 
-"hotels_en_US_search": "hotels search", "hotels_en_US_booking": "hotels booking", 
-"attractions_en_US_search": "attractions search", "weathers_en_US_search": "weathers search", 
-"HKMTR_en": "HKMTR en"}
-API_MAP.update({v:k for k, v in zh2en_API_MAP.items()})
-API_MAP.update({k:k for k, v in zh2en_API_MAP.items()})
+API_MAP = (
+    {
+        'chat': 'chat',
+        "restaurants_en_US_search": "restaurants search",
+        "restaurants_en_US_booking": "restaurants booking",
+        "hotels_en_US_search": "hotels search",
+        "hotels_en_US_booking": "hotels booking",
+        "attractions_en_US_search": "attractions search",
+        "weathers_en_US_search": "weathers search",
+        "HKMTR_en": "HKMTR en",
+    }
+    | {v: k for k, v in zh2en_API_MAP.items()}
+    | {k: k for k in zh2en_API_MAP}
+)
 en_API_MAP = {'chat':'chat', "restaurants_en_US_search": "restaurants search", "restaurants_en_US_booking":"restaurants booking", 
 "hotels_en_US_search": "hotels search", "hotels_en_US_booking": "hotels booking", 
 "attractions_en_US_search": "attractions search", "weathers_en_US_search": "weathers search", 
@@ -123,13 +131,13 @@ def knowledge2span(knowledge):
 
 
 def read_data(args, path_names, tokenizer, max_history=3):
-    print(("Reading all files from {}".format(path_names)))
+    print(f"Reading all files from {path_names}")
     data = []
     # dst_data = []
     required_slots = read_require_slots()
 
     required_slots = {API_MAP[k]:v for k, v in required_slots.items()}
-    
+
     # read files
     for path_name in path_names:
         with open(path_name) as f:
@@ -149,7 +157,7 @@ def read_data(args, path_names, tokenizer, max_history=3):
                         with open(f"data/{target_lang}_fewshot_dials.json") as f:
                             dial_ids = json.load(f)["fewshot_dials"]
                     dials = {dial_id:dials[dial_id] for dial_id in dial_ids}
-            
+
 
             for dial_id, dial in dials.items():
                 dialog_history = []
@@ -166,13 +174,13 @@ def read_data(args, path_names, tokenizer, max_history=3):
 
                         if domain not in knowledge:
                             knowledge[domain] = {}
-                        
+
                         if int(turn["TotalItems"]) == 0:
                             knowledge_text = f"<knowledge> [{domain}] Message = No item avaiable." 
                         else:
                             knowledge[domain].update(turn["Item"])
                             knowledge_text = knowledge2span(knowledge)
-                    
+
                     if turn["Agent"] == "User":
                         turn_id+=1
                         # accumulate dialogue utterances
@@ -185,8 +193,8 @@ def read_data(args, path_names, tokenizer, max_history=3):
                         Lev = compute_lev_span(last_dialogue_state, current_state, intent)
 
                         state_text = state2span(last_dialogue_state,required_slots)
-                        
-                        input_text = "Track Dialogue State:"+ knowledge_text + "<dialogue_state> " + state_text + dialog_history_text
+
+                        input_text = f"Track Dialogue State:{knowledge_text}<dialogue_state> {state_text}{dialog_history_text}"
 
                         # for cross lingual transfer task
                         if args.pretraining_prefix == "en2zh_trainsfer":
@@ -238,22 +246,19 @@ def read_data(args, path_names, tokenizer, max_history=3):
                     if turn["Agent"] == "Wizard":
                         if turn["Actions"] == "query":
                             API_flag = True
-                            
+
                             target = f"<API> {intent}" 
                             last_API_call = target
                             API_call = ""
                         else:
                             turn_id+=1
                             # if last event is an API call
-                            if API_flag:
-                                API_call = last_API_call
-                            else:
-                                API_call = ""
+                            API_call = last_API_call if API_flag else ""
                             target = turn["Text"]
                             API_flag = False
-                            
+
                         state_text = state2span(last_dialogue_state, required_slots)
-                        input_text = "Generate Response:" + knowledge_text + "<dialogue_state> " + state_text + dialog_history_text + API_call
+                        input_text = f"Generate Response:{knowledge_text}<dialogue_state> {state_text}{dialog_history_text}{API_call}"
                         input_text = input_text.strip()
 
                         target = target.strip()
@@ -305,8 +310,8 @@ def read_data(args, path_names, tokenizer, max_history=3):
                         data.append(data_detail)
                         # accumulate dialogue utterances
                         if not API_flag:
-                            dialog_history.append("<system> " + target)
-                    
+                            dialog_history.append(f"<system> {target}")
+
     print(data[:5])
     return data
 
@@ -330,15 +335,13 @@ def prepare_data(args, tokenizer, max_history=3, test_only=False):
         path_test = ["data/zh_test.json", "data/en_test.json"]
 
     if test_only:
-        data_test = read_data(args, path_test, tokenizer, max_history)
-        return data_test
-    else:
-        data_train = read_data(args, path_train, tokenizer, max_history)
-        data_dev = read_data(args, path_dev, tokenizer, max_history)
-        if args.setting == "en_zh":
-            random.shuffle(data_train)
-            random.shuffle(data_dev)
-        return data_train, data_dev
+        return read_data(args, path_test, tokenizer, max_history)
+    data_train = read_data(args, path_train, tokenizer, max_history)
+    data_dev = read_data(args, path_dev, tokenizer, max_history)
+    if args.setting == "en_zh":
+        random.shuffle(data_train)
+        random.shuffle(data_dev)
+    return data_train, data_dev
 
 
 

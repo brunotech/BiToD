@@ -66,19 +66,19 @@ def state2api(dict_data):
     # convert the dictionary in the data to api
     constraints = {}
     for slot, r_v in dict_data.items():
-        if r_v["value"]==["don't care"] or r_v["value"]==["不在乎"]:
+        if r_v["value"] in [["don't care"], ["不在乎"]]:
             continue
         relation = r_v["relation"]
         values = r_v["value"]
-        if relation != "one_of" and relation != en2zh_RELATION_MAP["one_of"]:
+        if relation not in ["one_of", en2zh_RELATION_MAP["one_of"]]:
             values = values[0]
-        if relation=="one_of" or relation==en2zh_RELATION_MAP["one_of"]:
+        if relation in ["one_of", en2zh_RELATION_MAP["one_of"]]:
             constraints[slot] = api.is_one_of(values)
-        elif relation=="at_least" or relation==en2zh_RELATION_MAP["at_least"]:
+        elif relation in ["at_least", en2zh_RELATION_MAP["at_least"]]:
             constraints[slot] = api.is_at_least(values)
-        elif relation=="not" or relation==en2zh_RELATION_MAP["not"]:
+        elif relation in ["not", en2zh_RELATION_MAP["not"]]:
             constraints[slot] = api.is_not(values)
-        elif relation=="less_than" or relation==en2zh_RELATION_MAP["less_than"]:
+        elif relation in ["less_than", en2zh_RELATION_MAP["less_than"]]:
             constraints[slot] = api.is_less_than(values)
         else:
             constraints[slot] = api.is_equal_to(values)
@@ -92,19 +92,19 @@ def dict2api(dict_data):
             relation = values[values.find(".")+1:values.find("(")]
             values = values[values.find("(")+1:-1]
             # for one of
-            
-            if relation=="one_of" or relation==en2zh_RELATION_MAP["one_of"]:
+
+            if relation in ["one_of", en2zh_RELATION_MAP["one_of"]]:
                 # check this
                 values = values.split(" , ")
             else:
                 values = int(values) if is_int(values) else values
-            if relation=="one_of" or relation==en2zh_RELATION_MAP["one_of"]:
+            if relation in ["one_of", en2zh_RELATION_MAP["one_of"]]:
                 constraints[slot] = api.is_one_of(values)
-            elif relation=="at_least" or relation==en2zh_RELATION_MAP["at_least"]:
+            elif relation in ["at_least", en2zh_RELATION_MAP["at_least"]]:
                 constraints[slot] = api.is_at_least(values)
-            elif relation=="not" or relation==en2zh_RELATION_MAP["not"]:
+            elif relation in ["not", en2zh_RELATION_MAP["not"]]:
                 constraints[slot] = api.is_not(values)
-            elif relation=="less_than" or relation==en2zh_RELATION_MAP["less_than"]:
+            elif relation in ["less_than", en2zh_RELATION_MAP["less_than"]]:
                 constraints[slot] = api.is_less_than(values)
             else:
                 constraints[slot] = api.is_equal_to(values)
@@ -126,7 +126,7 @@ def generate_dst(args, tokenizer, test_data, dst_model=None):
             knowledge = {}
             knowledge_text = "<knowledge>"
             dialogue_state = {}
-        
+
         # DST
         if sample["turn_id"]%2==0 and sample["train_target"]=="response":
             try:
@@ -135,8 +135,11 @@ def generate_dst(args, tokenizer, test_data, dst_model=None):
                 print(lev)
                 print(state_update)
                 print(dialogue_state)
-                
-            input_text = knowledge_text + "<dialogue_state> " + state_text + sample["dialog_history"]
+
+            input_text = (
+                f"{knowledge_text}<dialogue_state> {state_text}"
+                + sample["dialog_history"]
+            )
             input_batch = tokenizer(input_text, return_tensors="pt", verbose=False)
             input_ids = input_batch["input_ids"]
 
@@ -145,7 +148,7 @@ def generate_dst(args, tokenizer, test_data, dst_model=None):
                                     max_length=200,
                                     num_beams=args.num_beams
                                     )
-            
+
             lev_batch = tokenizer.batch_decode(lev_outputs)
             lev = lev_batch[0]
 
@@ -185,13 +188,13 @@ def generate_dst(args, tokenizer, test_data, dst_model=None):
                     domain = api_name.split("_")[0]
                     if domain not in knowledge:
                         knowledge[domain] = {}
-                    
+
                     if int(msg[1]) <= 0:
                         knowledge_text = f"<knowledge> [{domain}] Message = No item avaiable."
                     else:
                         knowledge[domain].update(msg[0])
                         knowledge_text = knowledge2span(knowledge)
-                
+
                 API_CALL = False
         else:
             API_CALL = True
